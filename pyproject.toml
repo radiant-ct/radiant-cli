@@ -1,0 +1,26 @@
+[project]
+name = "radiant-cli"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Pepe Coral",email = "coritochico@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "typer (>=0.20.0,<0.21.0)",
+    "rich (>=14.2.0,<15.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "radiant_cli", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=8.4.2,<9.0.0)",
+    "poethepoet (>=0.37.0,<0.38.0)"
+]
