@@ -1,8 +1,13 @@
-import typer
 from rich.console import Console
+from radiant_cli.services.health_service import get_hello_health
+import asyncio
 
 console = Console()
 
 def hello():
     """Pings to your remote repository."""
-    console.print("Hello", "World!", style="bold red")
+    asyncio.run(async_hello())
+
+async def async_hello():
+    data = await get_hello_health()
+    console.print(data, style="bold red")
