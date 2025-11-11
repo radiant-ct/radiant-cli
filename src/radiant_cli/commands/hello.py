@@ -10,4 +10,4 @@ def hello():
 
 async def async_hello():
     data = await get_hello_health()
-    console.print(data, style="bold red")
+    console.print(data["message"], style="bold red")
