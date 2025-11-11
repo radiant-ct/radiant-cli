@@ -1,8 +1,11 @@
 import typer
+from radiant_cli.utils.config_util import save_config, load_config, RadiantCLIConfiguration
 
 app = typer.Typer(help="Say hello commands")
 
 @app.command()
-def remote(name: str):
-    """Say hello to someone."""
-    print(f"Remote was set to {name}")
+def remote(url: str):
+    """Config the url of the remote repository."""
+    config : RadiantCLIConfiguration = load_config()
+    config.remote.base_url = url
+    save_config(config)

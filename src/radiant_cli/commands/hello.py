@@ -9,5 +9,8 @@ def hello():
     asyncio.run(async_hello())
 
 async def async_hello():
-    data = await get_hello_health()
-    console.print(data["message"], style="bold red")
+    try:
+      data = await get_hello_health()
+      console.print(data["message"], style="bold green")
+    except:
+       console.print("Cannot connect to the server", style="bold red")
