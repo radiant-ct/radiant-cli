@@ -1,8 +1,8 @@
 import httpx
-
+from radiant_cli.utils.config_util import load_config
 
 async def get_hello_health() -> dict:
-    base_url = "http://localhost:8000"
+    base_url = load_config().remote.base_url
     url = f"{base_url}/health/hello"
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
