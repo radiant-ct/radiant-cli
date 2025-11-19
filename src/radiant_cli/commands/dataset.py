@@ -11,6 +11,9 @@ from radiant_cli.utils.dataset.dataset_config_util import (
 from rich.panel import Panel
 from rich.markdown import Markdown
 
+from radiant_cli.clients.models.dataset_models import DatasetCreate
+from radiant_cli.clients.dataset_service import DatasetClient
+import asyncio
 console: Console = Console()
 app: typer.Typer = typer.Typer(help="Dataset Management Commands")
 
@@ -87,3 +90,34 @@ def show(path: Optional[str] = typer.Argument(None, help="Folder to show dataset
     md_text = "\n\n".join(md_lines)
 
     console.print(Panel(Markdown(md_text), title="Dataset Info", border_style="green"))
+
+
+@app.command()
+def upload(path: Optional[str] = typer.Argument(None, help="Folder to show dataset info from (defaults to current directory)")) -> None:
+    """
+    Show dataset metadata if the folder is a dataset (contains .dataset/meta.toml).
+    """
+    return asyncio.run(_upload(path))
+
+
+async def _upload(path: Optional[str]) -> None:
+    target: Path = Path(path) if path else Path.cwd()
+
+    if not target.exists() or not target.is_dir():
+        console.print(f"[bold red]Error:[/bold red] Path does not exist or is not a directory: {target}")
+        raise typer.Exit(code=1)
+
+    if not is_dataset(target):
+        console.print(f"[bold yellow]No dataset found in {target}[/bold yellow]")
+        raise typer.Exit()
+
+    metadata: DatasetConfiguration = load_metadata(target)
+    dataset_client = DatasetClient()
+    created = await dataset_client.create_dataset(
+        DatasetCreate(
+            name=metadata.name,
+            description=metadata.description,
+            credits=metadata.credits
+        )
+    )
+    console.print(f"[bold green]Dataset uploaded successfully[/bold green]")
