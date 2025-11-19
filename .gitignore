@@ -24,3 +24,7 @@ __docker__/
 
 # Databases
 *.db
+
+
+dist/
+.radiant/

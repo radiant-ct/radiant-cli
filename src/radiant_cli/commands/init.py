@@ -1,7 +1,6 @@
 from rich.console import Console
 from radiant_cli.utils.radiant_folder_util import create_radiant_folder, find_radiant_root
 from radiant_cli.utils.config_util import generate_default_config
-from pathlib import Path
 
 console = Console()
 

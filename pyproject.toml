@@ -2,27 +2,26 @@
 name = "radiant-cli"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "Pepe Coral",email = "coritochico@gmail.com"}
-]
+authors = [{ name = "Pepe Coral", email = "coritochico@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "typer (>=0.20.0,<0.21.0)",
-    "rich (>=14.2.0,<15.0.0)",
-    "tomli-w (>=1.2.0,<2.0.0)",
-    "tomli (>=2.3.0,<3.0.0)"
+  "typer (>=0.20.0,<0.21.0)",
+  "rich (>=14.2.0,<15.0.0)",
+  "tomli-w (>=1.2.0,<2.0.0)",
+  "tomli (>=2.3.0,<3.0.0)",
+  "httpx (>=0.28.1,<0.29.0)",
 ]
 
 [tool.poetry]
-packages = [{include = "radiant_cli", from = "src"}]
+packages = [{ include = "radiant_cli", from = "src" }]
+
+[project.scripts]
+radiant = "radiant_cli.main:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
-dev = [
-    "pytest (>=8.4.2,<9.0.0)",
-    "poethepoet (>=0.37.0,<0.38.0)"
-]
+dev = ["pytest (>=8.4.2,<9.0.0)", "poethepoet (>=0.37.0,<0.38.0)"]

@@ -1,4 +1,0 @@
-app_name = "MyApp"
-
-[remote]
-base_url = "http://localhost:8000"
