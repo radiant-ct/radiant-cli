@@ -1,7 +1,7 @@
 import typer
 from radiant_cli.utils.config_util import save_config, load_config, RadiantCLIConfiguration
 
-app = typer.Typer(help="Say hello commands")
+app = typer.Typer(help="Configuration commands")
 
 @app.command()
 def remote(url: str):
