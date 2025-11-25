@@ -28,3 +28,4 @@ __docker__/
 
 dist/
 .radiant/
+example_dataset/
