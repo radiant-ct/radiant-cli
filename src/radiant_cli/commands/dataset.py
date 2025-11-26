@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 
 from radiant_cli.clients.models.dataset_models import DatasetCreate
-from radiant_cli.clients.dataset_service import DatasetClient
+from src.radiant_cli.clients.dataset_client import DatasetClient
 import asyncio
 import shutil
 console: Console = Console()
