@@ -5,14 +5,6 @@ import json
 
 class DatasetClient(BaseAPIClient):
 
-    async def list_datasets(self) -> List[DatasetRead] | dict:
-        data = await self._get("/datasets/")
-        # If error, return raw dict
-        if isinstance(data, dict) and "error" in data:
-            return data
-        return [DatasetRead(**item) for item in data]
-
-
     async def create_dataset(self, dataset: DatasetCreate, file_path: str):
         data = {"data": json.dumps(dataset.dict())}
 
