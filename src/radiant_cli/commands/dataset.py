@@ -8,13 +8,16 @@ from radiant_cli.utils.dataset.dataset_config_util import (
     load_metadata,
     is_dataset,
 )
+from radiant_cli.utils.dataset.upload_utils import make_tar_gz_with_progress, iter_files
+from rich.progress import Progress, BarColumn, TimeRemainingColumn, TransferSpeedColumn
 from rich.panel import Panel
 from rich.markdown import Markdown
 
 from radiant_cli.clients.models.dataset_models import DatasetCreate
-from src.radiant_cli.clients.dataset_client import DatasetClient
+from radiant_cli.clients.dataset_client import DatasetClient
 import asyncio
-import shutil
+
+
 console: Console = Console()
 app: typer.Typer = typer.Typer(help="Dataset Management Commands")
 
@@ -115,21 +118,59 @@ async def _upload(path: Optional[str]) -> None:
     metadata: DatasetConfiguration = load_metadata(target)
     dataset_client = DatasetClient()
 
-     # 1. Create temp tar.gz
-    archive_path = shutil.make_archive(
-        base_name=str(target),   # output without extension
-        format="gztar",          # produces .tar.gz
-        root_dir=str(target)
-    )
+    total_bytes = 0
+    for p in iter_files(target):
+        try:
+            total_bytes += p.stat().st_size
+        except Exception:
+            pass
 
-    dataset_client = DatasetClient()
+    import tempfile
+    tmp_dir = tempfile.TemporaryDirectory(prefix="radiant-archive-")
+    archive_path = Path(tmp_dir.name) / f"{target.name}.tar.gz"
 
-    created = await dataset_client.create_dataset(
+    with Progress(
+        "{task.description}",
+        BarColumn(bar_width=None),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+        console=console,
+    ) as progress:
+
+        arch_task = progress.add_task("Archiving dataset", total=total_bytes if total_bytes > 0 else None)
+
+        def _arch_cb(bytes_added: int) -> None:
+            progress.update(arch_task, advance=bytes_added)
+
+        await asyncio.to_thread(make_tar_gz_with_progress, target, archive_path, _arch_cb)
+
+        try:
+            archive_size = archive_path.stat().st_size
+        except Exception:
+            archive_size = None
+
+        upload_task = progress.add_task("Uploading archive", total=archive_size)
+
+        def _upload_cb(bytes_sent: int) -> None:
+            progress.update(upload_task, advance=bytes_sent)
+
+        created = await dataset_client.create_dataset(
         DatasetCreate(
             name=metadata.name,
             description=metadata.description,
             credits=metadata.credits
         ),
-        file_path=archive_path
-    )
+            file_path=str(archive_path),
+            progress_cb=_upload_cb,
+        )
+
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        pass
+    if isinstance(created, dict) and "error" in created:
+        console.print(f"[bold red]Upload failed:[/bold red] {created.get('error')}")
+        raise typer.Exit(code=1)
+
     console.print(f"[bold green]Dataset uploaded successfully[/bold green]")
