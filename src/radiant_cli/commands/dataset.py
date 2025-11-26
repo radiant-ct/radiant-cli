@@ -14,6 +14,7 @@ from rich.markdown import Markdown
 from radiant_cli.clients.models.dataset_models import DatasetCreate
 from radiant_cli.clients.dataset_service import DatasetClient
 import asyncio
+import shutil
 console: Console = Console()
 app: typer.Typer = typer.Typer(help="Dataset Management Commands")
 
@@ -113,11 +114,22 @@ async def _upload(path: Optional[str]) -> None:
 
     metadata: DatasetConfiguration = load_metadata(target)
     dataset_client = DatasetClient()
+
+     # 1. Create temp tar.gz
+    archive_path = shutil.make_archive(
+        base_name=str(target),   # output without extension
+        format="gztar",          # produces .tar.gz
+        root_dir=str(target)
+    )
+
+    dataset_client = DatasetClient()
+
     created = await dataset_client.create_dataset(
         DatasetCreate(
             name=metadata.name,
             description=metadata.description,
             credits=metadata.credits
-        )
+        ),
+        file_path=archive_path
     )
     console.print(f"[bold green]Dataset uploaded successfully[/bold green]")

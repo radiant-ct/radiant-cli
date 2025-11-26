@@ -1,5 +1,7 @@
 import httpx
 from radiant_cli.utils.config_util import load_config
+from typing import AsyncGenerator
+import os
 
 class BaseAPIClient:
     def __init__(self):
@@ -40,3 +42,20 @@ class BaseAPIClient:
                     "error": f"HTTP {e.response.status_code}",
                     "details": e.response.text,
                 }
+
+    async def _post_multipart(self, path: str, data: dict, files: dict):
+      url = f"{self.base_url}{path}"
+      async with httpx.AsyncClient(timeout=self.timeout) as client:
+          try:
+              resp = await client.post(url, data=data, files=files)
+              resp.raise_for_status()
+              return resp.json()
+
+          except httpx.RequestError as e:
+              return {"error": f"Request error: {str(e)}"}
+
+          except httpx.HTTPStatusError as e:
+              return {
+                  "error": f"HTTP {e.response.status_code}",
+                  "details": e.response.text,
+              }
