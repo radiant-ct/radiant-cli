@@ -7,12 +7,11 @@ import os
 
 @dataclass
 class RemoteConfiguration:
-    base_url: str = "http://localhost:8000"
+    base_url: str = "http://localhost"
 
 
 @dataclass
 class RadiantCLIConfiguration:
-    app_name: str = "MyApp"
     remote: RemoteConfiguration = field(default_factory=RemoteConfiguration)
 
 

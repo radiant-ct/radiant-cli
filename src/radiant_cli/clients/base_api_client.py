@@ -6,7 +6,7 @@ import os
 class BaseAPIClient:
     def __init__(self):
         config = load_config()
-        self.base_url = config.remote.base_url
+        self.base_url = config.remote.base_url + "/api"
         self.timeout = 10.0
 
     async def _get(self, path: str):

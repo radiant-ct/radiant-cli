@@ -99,7 +99,7 @@ def show(path: Optional[str] = typer.Argument(None, help="Folder to show dataset
 @app.command()
 def upload(path: Optional[str] = typer.Argument(None, help="Folder to show dataset info from (defaults to current directory)")) -> None:
     """
-    Show dataset metadata if the folder is a dataset (contains .dataset/meta.toml).
+    Uploads the dataset to a remote repository.
     """
     return asyncio.run(_upload(path))
 
