@@ -2,7 +2,7 @@ from pathlib import Path
 from radiant.utils.files.files import is_file_upwards
 import typer
 from rich import print
-
+from radiant.config.config import *
 
 app = typer.Typer()
 
@@ -11,10 +11,19 @@ def init():
     pwd = Path.cwd()
     if is_file_upwards(pwd, ".radiant"):
         print("[red]Error: already in a radiant workspace[/red]")
+        raise typer.Exit()
     
-
-    with open(".radiant", "w") as file:
-        file.write("Your text goes here")
-
+    create_config(pwd / ".radiant") 
     print("Workspace created [green]succesfully[/green]")
+
+@app.command()
+def set(key, value):
+    set_config(key,value)
+
+    print(f"[bold]{key}[/bold] was set to [green]{value}[/green]")
+
+@app.command()
+def get(key):
+    value = get_config(key)
+    print(f"[bold]{key}[/bold] has a value of [green]{value}[/green]")
 
