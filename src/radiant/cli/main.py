@@ -3,12 +3,12 @@ from rich import print
 from importlib.metadata import version
 
 from radiant.cli.workspace import app as workspace_app
+from radiant.cli.dataset import app as dataset_app
 
 APP_VERSION = version("radiant")
 
 app = typer.Typer()
 
-app.add_typer(workspace_app, name="workspace")
 
 def version_callback(value: bool):
     if value:
@@ -28,3 +28,8 @@ def main(
     )
 ):
     pass
+
+
+# Modules
+app.add_typer(workspace_app, name="workspace", help="Commands related to workspaces and configuration.")
+app.add_typer(dataset_app, name="dataset", help="Commands related to datasets management.")
