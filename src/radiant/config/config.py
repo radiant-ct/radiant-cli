@@ -19,7 +19,7 @@ def get_config_path() -> Path:
     path = find_file_upwards(Path.cwd(), ".radiant")
 
     if path == None:
-        print("[red]Error: not in a workspace, try:\\ [bold]radiant workspace init[/bold][/red]")
+        print("[red]Error: not in a workspace, try:\n[bold]radiant workspace init[/bold][/red]")
         raise typer.Exit()
 
     return path
