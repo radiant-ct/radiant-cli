@@ -1,0 +1,20 @@
+[project]
+name = "radiant"
+version = "0.1.0"
+description = "A CLI tool for medical imaging management"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "rich>=15.0.0",
+    "typer>=0.25.1",
+]
+
+[project.scripts]
+radiant = "radiant.cli.main:app"
+
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.12",
+]
