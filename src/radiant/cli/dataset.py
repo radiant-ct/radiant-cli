@@ -1,6 +1,13 @@
 import typer
 
+from radiant.backend_client import Client   
+from radiant.backend_client.api.dataset_controller.get_all_datasets import sync_detailed as get_all_datasets
+
+from radiant.config.config import load_config
+
 app = typer.Typer()
+config = load_config()
+client = Client(base_url=config.remote)
 
 @app.command()
 def init():
@@ -9,12 +16,12 @@ def init():
 
 @app.command()
 def push():
-    passuv 
+    pass
 
 @app.command(name="list")
 def list_remote():
-    pass
-
+    res = get_all_datasets(client=client)
+    print(res)
 
 @app.command()
 def show():
