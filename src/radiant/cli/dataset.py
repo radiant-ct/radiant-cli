@@ -1,7 +1,7 @@
 import typer
 
-from radiant.backend_client import Client   
-from radiant.backend_client.api.dataset_controller.get_all_datasets import sync_detailed as get_all_datasets
+from radiant.backend_api import Client   
+from radiant.backend_api.api.dataset_controller.get_all_datasets import sync as get_all_datasets
 
 from radiant.config.config import load_config
 
