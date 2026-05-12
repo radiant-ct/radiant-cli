@@ -1,20 +1,25 @@
 import typer
 
+from dataclasses import asdict
+
 from radiant.backend_api import Client   
 from radiant.backend_api.api.dataset_controller.get_all_datasets import sync as get_all_datasets
 
 from radiant.config.config import load_config
-from radiant.utils.files.files import  is_file_upwards
+from radiant.utils.files.files import  is_file_upwards, find_file_upwards
 
 from radiant.dataset.dataset_metadata_schema import DatasetMetadataSchema
-from radiant.dataset.dataset_metadata_service import create_dataset_metadata
+from radiant.dataset.dataset_metadata_service import create_dataset_metadata, load_dataset_metadata
 
 from pathlib import Path
 from rich import print
+from rich.console import Console
+from rich.table import Table
 
 app = typer.Typer()
 config = load_config()
 client = Client(base_url=config.remote)
+console = Console()
 
 @app.command()
 def init(
@@ -53,4 +58,24 @@ def list_remote():
 
 @app.command()
 def show():
-    pass
+    dataset_path = find_file_upwards(Path.cwd(), ".dataset")
+
+    if dataset_path is None:
+        print("[red]Error: not in a dataset folder, try: \r [bold]radiant dataset init[/bold][/red]")
+        raise typer.Exit()
+    
+    metadata = load_dataset_metadata(dataset_path)
+    _pretty_print_dataset_metadata(metadata)
+
+
+
+def _pretty_print_dataset_metadata(metadata: DatasetMetadataSchema):
+    table = Table(title="Dataset Metadata")
+
+    table.add_column("Field", style="cyan bold")
+    table.add_column("Value", style="white")
+
+    for key, value in asdict(metadata).items():
+        table.add_row(key, str(value))
+
+    console.print(table)
