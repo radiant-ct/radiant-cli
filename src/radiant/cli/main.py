@@ -4,11 +4,17 @@ from importlib.metadata import version
 
 from radiant.cli.workspace import app as workspace_app
 from radiant.cli.dataset import app as dataset_app
+from radiant.backend_api.api.health_controller.health import sync as health_check
 
-APP_VERSION = version("radiant")
+from rich.console import Console
+from radiant.config.config import load_config
+from radiant.cli.dataset import app as dataset_app, get_client
+from radiant.backend_api.api.health_controller.health import sync as health_check
+from radiant.backend_api.client import Client
+
+APP_VERSION = version("radiant-ct")
 
 app = typer.Typer()
-
 
 def version_callback(value: bool):
     if value:
@@ -28,6 +34,26 @@ def main(
     )
 ):
     pass
+
+
+@app.command()
+def health():
+    """Check connectivity to the configured remote."""
+    config = load_config()
+    client = Client(base_url=config.remote)
+    print(f"Pinging [cyan]{config.remote}[/cyan]...")
+    try:
+        result = health_check(client=client)
+        if result is not None:
+            print(f"[green]✓ Remote is healthy[/green] — {result}")
+        else:
+            print("[red]✗ Remote returned an empty response[/red]")
+            raise typer.Exit(1)
+    except Exception as e:
+        print(f"[red]✗ Could not reach remote:[/red] {e}")
+        raise typer.Exit(1)
+
+
 
 
 # Modules
