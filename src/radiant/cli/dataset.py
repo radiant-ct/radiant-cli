@@ -146,7 +146,26 @@ def push():
 @app.command(name="list")
 def list_remote():
     res = get_all_datasets(client=get_client())
-    print(res)
+
+    if not res or len(res) == 0:
+        print("[yellow]No datasets found.[/yellow]")
+        raise typer.Exit()
+
+    table = Table(title="Remote Datasets", border_style="cyan", header_style="bold cyan")
+    table.add_column("ID", style="dim")
+    table.add_column("Name", style="bold white")
+    table.add_column("Description", max_width=50)
+    table.add_column("Credits")
+
+    for dataset in res:
+        table.add_row(
+            str(dataset.id),
+            dataset.name,
+            dataset.description or "—",
+            dataset.credits_ or "—",
+        )
+
+    console.print(table)
 
 @app.command()
 def show():
