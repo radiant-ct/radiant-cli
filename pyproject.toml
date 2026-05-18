@@ -1,16 +1,18 @@
     [project]
     name = "radiant-ct"
-    version = "0.1.2"
+    version = "1.0.0"
     description = "A CLI tool for medical imaging management"
     readme = "README.md"
     requires-python = ">=3.12"
     dependencies = [
+        "httpx>=0.28.1",
         "openapi-python-client>=0.28.4",
         "pydantic>=2.13.4",
         "pyyaml>=6.0.3",
         "rich>=15.0.0",
+        "textual>=8.2.6",
         "typer>=0.25.1",
-    ]
+]
 
     [project.scripts]
     radiant = "radiant.cli.main:app"

@@ -11,7 +11,7 @@ from radiant.config.config import load_config
 from radiant.cli.dataset import app as dataset_app, get_client
 from radiant.backend_api.api.health_controller.health import sync as health_check
 from radiant.backend_api.client import Client
-
+from radiant.cli.bundle import app as bundle_app
 APP_VERSION = version("radiant-ct")
 
 app = typer.Typer()
@@ -59,3 +59,4 @@ def health():
 # Modules
 app.add_typer(workspace_app, name="workspace", help="Commands related to workspaces and configuration.")
 app.add_typer(dataset_app, name="dataset", help="Commands related to datasets management.")
+app.add_typer(bundle_app, name="bundle", help="Commands for managing image bundles.")
