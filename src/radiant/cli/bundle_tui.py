@@ -16,7 +16,7 @@ from textual.reactive import reactive
 from textual.screen import Screen, ModalScreen
 from textual.widgets import (
     Button, Checkbox, DataTable, Footer, Header,
-    Input, Label, ListItem, ListView, Pretty,
+    Input, Label, ListItem, ListView, Pretty, Select,
     Static, Switch, TabbedContent, TabPane,
 )
 from textual.widget import Widget
@@ -197,16 +197,21 @@ class RangeRow(Widget):
     }
     """
 
-    def __init__(self, label: str, camel_base: str, cast: type, **kwargs):
+    def __init__(self, label: str, camel_base: str, cast: type,
+                 min_val: Any = None, max_val: Any = None, **kwargs):
         super().__init__(**kwargs)
         self.label      = label
         self.camel_base = camel_base
         self.cast       = cast
+        self.min_val    = min_val
+        self.max_val    = max_val
 
     def compose(self) -> ComposeResult:
+        min_ph = f"min ({self.min_val})" if self.min_val is not None else "min"
+        max_ph = f"max ({self.max_val})" if self.max_val is not None else "max"
         yield Label(self.label, classes="range-label", id=f"lbl-{self.camel_base}")
-        yield Input(placeholder="min", id=f"{self.camel_base}_min", classes="range-input")
-        yield Input(placeholder="max", id=f"{self.camel_base}_max", classes="range-input")
+        yield Input(placeholder=min_ph, id=f"{self.camel_base}_min", classes="range-input")
+        yield Input(placeholder=max_ph, id=f"{self.camel_base}_max", classes="range-input")
 
     @on(Input.Changed)
     def _mark_active(self, event: Input.Changed) -> None:
@@ -379,14 +384,15 @@ class ResultsScreen(Screen):
         tbl = self.query_one("#results-table", DataTable)
         tbl.add_columns("ID", "Sex", "Age", "Manufacturer", "Model", "Seg?", "Slices")
         for img in self.results:
+            ap = getattr(img, "additional_properties", None) or {}
             tbl.add_row(
                 str(img.id),
-                getattr(img, "sex",               None) or "—",
-                str(getattr(img, "age_years",     None) or "—"),
-                getattr(img, "manufacturer",      None) or "—",
-                getattr(img, "manufacturer_model",None) or "—",
-                "✓" if getattr(img, "has_segmentation", False) else "✗",
-                str(getattr(img, "n_slices",      None) or "—"),
+                ap.get("sex", getattr(img, "sex", "—")) or "—",
+                str(ap.get("ageYears", getattr(img, "age_years", "—")) or "—"),
+                ap.get("manufacturer", getattr(img, "manufacturer", "—")) or "—",
+                ap.get("manufacturerModel", getattr(img, "manufacturer_model", "—")) or "—",
+                "✓" if (ap.get("hasSegmentation", getattr(img, "has_segmentation", False))) else "✗",
+                str(ap.get("nSlices", getattr(img, "n_slices", "—")) or "—"),
             )
 
     @on(Button.Pressed, "#back")
@@ -543,11 +549,16 @@ class BundleFilterApp(App):
         Binding("ctrl+x", "clear",   "Clear All"),
     ]
 
-    def __init__(self, bundle_name: str, search_fn, **kwargs):
+    def __init__(self, bundle_name: str, search_fn,
+                 range_limits: dict | None = None,
+                 distinct_values: dict | None = None,
+                 **kwargs):
         super().__init__(**kwargs)
-        self.bundle_name = bundle_name
-        self.search_fn   = search_fn          # callable(ImageFilter) -> list[ImageResponseDTO]
-        self._seg_value: bool | None = None   # None=any, True=yes, False=no
+        self.bundle_name      = bundle_name
+        self.search_fn        = search_fn
+        self.range_limits     = range_limits or {}
+        self.distinct_values  = distinct_values or {}
+        self._seg_value: bool | None = None
 
     # ── Compose ────────────────────────────────────────────────────────────
 
@@ -575,63 +586,89 @@ class BundleFilterApp(App):
                             yield Button("No",  id="seg-no",  variant="default")
 
                     yield Static("Patient & Acquisition", classes="section-header")
-                    for label, camel_id in _cat_fields_dicom():
+                    for label, attr_name, camel_id in CATEGORICAL_FIELDS:
+                        options = [(v, v) for v in self.distinct_values.get(camel_id, [])]
                         with Container(classes="cat-row"):
                             yield Label(label, classes="cat-label", id=f"lbl-cat-{camel_id}")
-                            yield Input(placeholder=label, id=f"cat-{camel_id}", classes="cat-input")
+                            yield Select(options, prompt=label, allow_blank=True,
+                                         id=f"cat-{camel_id}", classes="cat-input", compact=True)
 
                     yield Static("Numeric Ranges", classes="section-header")
                     for label, base_attr, cast in _dicom_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
 
             # ── Tab 2: Shape ─────────────────────────────────────────────
             with TabPane("Shape", id="tab-shape"):
                 with ScrollableContainer(classes="tab-scroll"):
                     yield Static("Shape Features", classes="section-header")
                     for label, base_attr, cast in _shape_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
 
             # ── Tab 3: First Order ───────────────────────────────────────
             with TabPane("First Order", id="tab-first"):
                 with ScrollableContainer(classes="tab-scroll"):
                     yield Static("First Order Statistics", classes="section-header")
                     for label, base_attr, cast in _first_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
 
             # ── Tab 4: GLCM ──────────────────────────────────────────────
             with TabPane("GLCM", id="tab-glcm"):
                 with ScrollableContainer(classes="tab-scroll"):
                     yield Static("Gray-Level Co-occurrence Matrix", classes="section-header")
                     for label, base_attr, cast in _glcm_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
 
             # ── Tab 5: GLRLM / GLSZM ─────────────────────────────────────
             with TabPane("GLRLM / GLSZM", id="tab-gl2"):
                 with ScrollableContainer(classes="tab-scroll"):
                     yield Static("GLRLM", classes="section-header")
                     for label, base_attr, cast in _glrlm_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
                     yield Static("GLSZM", classes="section-header")
                     for label, base_attr, cast in _glszm_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
 
             # ── Tab 6: NGTDM / GLDM ──────────────────────────────────────
             with TabPane("NGTDM / GLDM", id="tab-ng"):
                 with ScrollableContainer(classes="tab-scroll"):
                     yield Static("NGTDM", classes="section-header")
                     for label, base_attr, cast in _ngtdm_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
                     yield Static("GLDM", classes="section-header")
                     for label, base_attr, cast in _gldm_range_fields():
-                        yield RangeRow(label, _to_camel(base_attr), cast,
-                                       id=f"rr-{_to_camel(base_attr)}")
+                        camel = _to_camel(base_attr)
+                        yield RangeRow(label, camel, cast,
+                                       min_val=self.range_limits.get(camel + "Min"),
+                                       max_val=self.range_limits.get(camel + "Max"),
+                                       id=f"rr-{camel}")
 
         with Horizontal(classes="action-bar"):
             yield Static(classes="spacer")
@@ -670,12 +707,15 @@ class BundleFilterApp(App):
     # ── Categorical active highlight ───────────────────────────────────────
 
     @on(Input.Changed)
-    def _on_any_input(self, event: Input.Changed) -> None:
-        # Highlight categorical labels
-        if event.input.has_class("cat-input"):
-            cat_id = event.input.id.removeprefix("cat-")
+    def _on_input_changed(self, event: Input.Changed) -> None:
+        self._refresh_filter_count()
+
+    @on(Select.Changed)
+    def _on_select_changed(self, event: Select.Changed) -> None:
+        if event.select.has_class("cat-input") and event.select.id is not None:
+            cat_id = event.select.id.removeprefix("cat-")
             lbl = self.query_one(f"#lbl-cat-{cat_id}", Label)
-            lbl.set_class(bool(event.value), "active")
+            lbl.set_class(event.value is not Select.BLANK and event.value is not Select.NULL, "active")
         self._refresh_filter_count()
 
     # ── Filter count badge ─────────────────────────────────────────────────
@@ -697,10 +737,10 @@ class BundleFilterApp(App):
             collected["hasSegmentation"] = self._seg_value
 
         # categoricals
-        for _label, camel_id in _cat_fields_dicom():
-            raw = self.query_one(f"#cat-{camel_id}", Input).value.strip()
-            if raw:
-                collected[camel_id] = raw
+        for _label, attr_name, camel_id in CATEGORICAL_FIELDS:
+            sel = self.query_one(f"#cat-{camel_id}", Select)
+            if sel.value is not Select.BLANK and sel.value is not Select.NULL and sel.value is not None:
+                collected[camel_id] = sel.value
 
         # all range rows
         for rr in self.query(RangeRow):
@@ -718,6 +758,8 @@ class BundleFilterApp(App):
     def action_clear(self) -> None:
         for inp in self.query(Input):
             inp.value = ""
+        for sel in self.query(Select):
+            sel.clear()
         self._seg_value = None
         self._update_seg_buttons()
         self._refresh_filter_count()
@@ -754,9 +796,6 @@ class BundleFilterApp(App):
 # Field group helpers (slice RANGE_FIELDS into tabs)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _cat_fields_dicom() -> list[tuple[str, str]]:
-    return [(label, camel) for label, _attr, camel in CATEGORICAL_FIELDS]
-
 def _dicom_range_fields():
     return [r for r in RANGE_FIELDS if not any(
         r[1].startswith(p) for p in
@@ -789,12 +828,27 @@ def _gldm_range_fields():
 # Public entry point called from bundle.py
 # ─────────────────────────────────────────────────────────────────────────────
 
-def run_filter_tui(bundle_name: str, search_fn) -> list | None:
+def run_filter_tui(bundle_name: str, search_fn,
+                   range_limits_fn=None, distinct_values_fn=None) -> list | None:
     """
     Launch the TUI. Returns a list[ImageResponseDTO] if the user confirmed,
     or None if they quit without saving.
     """
-    app = BundleFilterApp(bundle_name=bundle_name, search_fn=search_fn)
+    range_limits = None
+    if range_limits_fn is not None:
+        try:
+            range_limits = range_limits_fn()
+        except Exception:
+            pass
+    distinct_values = None
+    if distinct_values_fn is not None:
+        try:
+            distinct_values = distinct_values_fn()
+        except Exception:
+            pass
+    app = BundleFilterApp(bundle_name=bundle_name, search_fn=search_fn,
+                          range_limits=range_limits,
+                          distinct_values=distinct_values)
     return app.run()
 
 
@@ -823,7 +877,28 @@ if __name__ == "__main__":
             FakeImage(uuid.uuid4(), "M", 38, "Philips", "Ingenia", True,  96),
         ]
 
-    result = run_filter_tui("my-bundle", _mock_search)
+    _FAKE_RANGES = {
+        "ageYearsMin": 18, "ageYearsMax": 90,
+        "kvpMin": 80, "kvpMax": 140,
+        "exposureMasMin": 50, "exposureMasMax": 500,
+        "sliceThicknessMmMin": 0.5, "sliceThicknessMmMax": 5.0,
+        "pixelSpacingMmMin": 0.3, "pixelSpacingMmMax": 1.5,
+        "rowsMin": 256, "rowsMax": 1024,
+        "columnsMin": 256, "columnsMax": 1024,
+        "nSlicesMin": 20, "nSlicesMax": 500,
+    }
+
+    _FAKE_DISTINCT = {
+        "sex": ["F", "M"],
+        "convolutionKernel": ["B", "C", "D", "E"],
+        "manufacturer": ["GE", "Philips", "Siemens"],
+        "manufacturerModel": ["Ingenia", "Optima", "SOMATOM"],
+        "softwareVersion": ["VB20", "VB30", "VB40"],
+    }
+
+    result = run_filter_tui("my-bundle", _mock_search,
+                            range_limits_fn=lambda: _FAKE_RANGES,
+                            distinct_values_fn=lambda: _FAKE_DISTINCT)
     if result:
         print(f"\nSaved {len(result)} image IDs.")
     else:

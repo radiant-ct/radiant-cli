@@ -248,6 +248,8 @@ def add():
     results = run_filter_tui(
         bundle_name=metadata.name,
         search_fn=lambda f: search_images(client=get_client(), filter_=f),
+        range_limits_fn=lambda: fetch_range_limits(client=get_client()),
+        distinct_values_fn=lambda: fetch_distinct_values(client=get_client()),
     )
 
     if not results:
@@ -356,6 +358,24 @@ def show():
 
     console.print(table)
     print(f"\nTotal: [bold]{len(metadata.image_ids)}[/bold] image(s)")
+
+
+def fetch_range_limits(client=None):
+    """Fetch min/max values for all numeric fields from the backend."""
+    if client is None:
+        client = get_client()
+    resp = client.get_httpx_client().get("/images/ranges")
+    resp.raise_for_status()
+    return resp.json()
+
+
+def fetch_distinct_values(client=None):
+    """Fetch distinct values for categorical fields from the backend."""
+    if client is None:
+        client = get_client()
+    resp = client.get_httpx_client().get("/images/distinct-values")
+    resp.raise_for_status()
+    return resp.json()
 
 
 def _load_config():

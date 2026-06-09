@@ -475,12 +475,13 @@ wheels = [
 
 [[package]]
 name = "radiant-ct"
-version = "0.1.2"
+version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "httpx" },
     { name = "openapi-python-client" },
     { name = "pydantic" },
+    { name = "python-dateutil" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "textual" },
@@ -498,6 +499,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "openapi-python-client", specifier = ">=0.28.4" },
     { name = "pydantic", specifier = ">=2.13.4" },
+    { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rich", specifier = ">=15.0.0" },
     { name = "textual", specifier = ">=8.2.6" },
